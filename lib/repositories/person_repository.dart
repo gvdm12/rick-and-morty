@@ -11,7 +11,7 @@ class PersonRepository {
 
   PersonRepository({required this.apiService});
 
-  // Получение персонажей с оффлайн и кэш поддержкой
+  // здесь  получение персонажей с оффлайн и кэш поддержкой
   Future<List<Person>> getCharacters({int page = 1}) async {
     var box = Hive.box(cacheBoxName);
     bool online = await hasInternet();
@@ -20,29 +20,28 @@ class PersonRepository {
       try {
         final persons = await apiService.fetchCharacters(page: page);
 
-        // Сохраняем в кэш
-        List<String> cached = persons.map((p) => jsonEncode(p.toJson())).toList();
+        List<String> cached = persons
+            .map((p) => jsonEncode(p.toJson()))
+            .toList();
         await box.put('page_$page', cached);
 
         return persons;
-      } catch (_) {
-        // если API упало, продолжаем кэш
-      }
+      } catch (_) {}
     }
-
-    // Оффлайн или ошибка API — возвращаем все страницы кэша
     List<Person> cachedPersons = [];
     for (var key in box.keys) {
       List<dynamic>? cached = box.get(key);
       if (cached != null) {
-        cachedPersons.addAll(cached.map((e) => Person.fromJson(jsonDecode(e))).toList());
+        cachedPersons.addAll(
+          cached.map((e) => Person.fromJson(jsonDecode(e))).toList(),
+        );
       }
     }
 
     if (cachedPersons.isNotEmpty) {
       return cachedPersons;
     } else {
-      throw Exception('нет интернета');
+      throw ('нет интернета');
     }
   }
 
@@ -55,7 +54,9 @@ class PersonRepository {
   Future<void> onFavorite(Person person) async {
     var box = Hive.box(favBoxName);
     List<dynamic> favList = box.get(favBoxName, defaultValue: []);
-    List<Person> favorites = favList.map((e) => Person.fromJson(jsonDecode(e))).toList();
+    List<Person> favorites = favList
+        .map((e) => Person.fromJson(jsonDecode(e)))
+        .toList();
 
     if (favorites.any((p) => p.id == person.id)) {
       favorites.removeWhere((p) => p.id == person.id);
@@ -63,31 +64,9 @@ class PersonRepository {
       favorites.add(person);
     }
 
-    List<String> favJson = favorites.map((p) => jsonEncode(p.toJson())).toList();
+    List<String> favJson = favorites
+        .map((p) => jsonEncode(p.toJson()))
+        .toList();
     await box.put(favBoxName, favJson);
   }
 }
-
-
-// class PersonRepository {
-//   final ApiService apiService;
-//   PersonRepository({required this.apiService});
-
-//   Future<List<Person>> getCharacters({int page = 1}) async {
-//     return await apiService.fetchCharacters(page: page);
-//   }
-
-//   final List<Person> _favorites = [];
-
-//   Future<List<Person>> getFavorites() async {
-//     return _favorites;
-//   }
-
-//   Future<void> onFavorite(Person person) async {
-//     if (_favorites.contains(person)) {
-//       _favorites.remove(person);
-//     } else {
-//       _favorites.add(person);
-//     }
-//   }
-// }
